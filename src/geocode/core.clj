@@ -1,3 +1,8 @@
+;  geocode
+; extract data from a csv file.
+; geocode addresses to obtain lat and long
+; use the openstates api to determine state representatives
+
 (ns geocode.core
   (:gen-class))
 
@@ -5,7 +10,6 @@
          '[clojure.java.io :as io]
          '[clojure.data.json :as json])
 
-(def in-file "/Users/rca/Dropbox/Work/Net Metering/PA_DEF.csv")
 
 (def cquery "http://geocoding.geo.census.gov/geocoder/locations/address?")
 (def oquery "http://openstates.org/api/v1//legislators/geo/?")
@@ -73,21 +77,42 @@
 
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "Geocode a csv file"
   [& args]
 
-  ; load the api-key
-  (def api-key (get (json/read-str
-                 (slurp "/Users/rca/.api-keys.json"))
-                    "openstates"))
-  (println api-key) 
+;(def in-file "/Users/rca/Dropbox/Work/Net Metering/PA_DEF.csv")
 
+; check for input parameters
+(if-not args (do
+               (println "Needs input file")
+               (System/exit 0)))
+
+(def in-file (first args))
+
+; check if file exists
+(if-not (.exists (io/file in-file)) (do
+               (println (str "Input file " in-file " not found"))
+               (System/exit 0)))
+
+;; get api key
+(def keyfile (str (System/getProperty "user.home")
+                    "/.api-keys.json"))
+  ; check for api-key
+(if-not (.exists (io/file keyfile)) (do
+               (println "Needs api key file")
+               (System/exit 0)))
+
+(def api-key (get (json/read-str
+  (slurp keyfile))
+  "openstates"))
+
+; process the data
   (with-open [in-file (io/reader in-file)]
-      (doall
-        (map #(get-sen-and-rep %1 api-key) 
-        (map geocode-address (csv/read-csv in-file)))
-      )
-  )
+    (doall
+      (map #(get-sen-and-rep %1 api-key) 
+      (map geocode-address (csv/read-csv in-file)))
+    ))
 
-  (println "Done Processing")
+    (println "Done Processing")
+    
 )
